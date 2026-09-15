@@ -62,48 +62,12 @@ df = load_sites()
 
 if st.session_state.page == "Dashboard":
     st.subheader("Dashboard")
-
-    # Count sites that need technical or commercial attention.
-    def site_needs_action(row):
-        signals = []
-
-        if pd.notna(row["battery_install_year"]) and row["battery_install_year"] > 0:
-            if date.today().year - int(row["battery_install_year"]) >= 4:
-                signals.append("Battery age review")
-
-        if str(row["battery_condition"]).strip() in ["Watch", "Poor"]:
-            signals.append("Battery condition")
-
-        if pd.notna(row["load_pct"]) and row["load_pct"] >= 75:
-            signals.append("Capacity review")
-
-        if pd.notna(row["step_kw"]) and row["step_kw"] > 0:
-            signals.append("Dynamic-load review")
-
-        opportunity = str(row["opportunity"]).strip()
-        if opportunity and opportunity != "None":
-            signals.append(opportunity)
-
-        return len(signals) > 0
-
-    action_required = int(df.apply(site_needs_action, axis=1).sum()) if len(df) else 0
-    battery_sites = int(
-        df["battery_model"].fillna("").astype(str).str.strip().ne("").sum()
-    ) if len(df) else 0
-    opportunities = int(
-        df["opportunity"].fillna("").astype(str).str.strip().ne("").sum()
-        - df["opportunity"].fillna("").astype(str).str.strip().eq("None").sum()
-    ) if len(df) else 0
-    avg_load = round(
-        pd.to_numeric(df["load_pct"], errors="coerce").mean(), 1
-    ) if len(df) else 0
-
     c1,c2,c3,c4,c5 = st.columns(5)
     c1.metric("Sites", len(df))
-    c2.metric("Sites Requiring Action", action_required)
-    c3.metric("Battery Sites", battery_sites)
-    c4.metric("Opportunities", opportunities)
-    c5.metric("Avg Load %", avg_load)
+    c2.metric("UPS Capacity (kVA)", round(df.capacity_kva.sum(),1) if len(df) else 0)
+    c3.metric("Battery Sites", int(df.battery_model.notna().sum()) if len(df) else 0)
+    c4.metric("Opportunities", int(df.opportunity.notna().sum()) if len(df) else 0)
+    c5.metric("Avg Load %", round(df.load_pct.mean(),1) if len(df) else 0)
     st.divider()
     if len(df):
         a,b = st.columns(2)
@@ -247,8 +211,6 @@ elif st.session_state.page == "Opportunity Engine":
             signals=[]
             if pd.notna(r.battery_install_year) and r.battery_install_year > 0 and date.today().year-r.battery_install_year >= 4:
                 signals.append("Battery age review")
-            if str(r.battery_condition).strip() in ["Watch", "Poor"]:
-                signals.append("Battery condition")
             if pd.notna(r.load_pct) and r.load_pct >= 75:
                 signals.append("Capacity review")
             if pd.notna(r.step_kw) and r.step_kw > 0:
